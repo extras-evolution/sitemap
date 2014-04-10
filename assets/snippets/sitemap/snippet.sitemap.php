@@ -172,7 +172,7 @@ switch ($format){
 
 	case 'ror': // TODO
 	default: // Sitemap Protocol
-		$output = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+		$output = '<?xml version="1.0" encoding="'.$modx->config["modx_charset"].'"?>'."\n";
 		if ($xsl != ''){
 			$output .='<?xml-stylesheet type="text/xsl" href="'.$xsl.'"?>'."\n";
 		}
