@@ -38,7 +38,7 @@ Changelog:
 + Document will be excluded from sitemap when changefreq parameter equals 'exclude'.
 * [(site_url)] (without alias) is using now for the start page ($modx->config['start_page']) document url.
 # 1.0.10 (2012-02-08) by DivanDesign (http://www.DivanDesign.biz)
-+ Snippet can see through unpublished documents (by default). See the «seeThruUnpub» parameter.
++ Snippet can see through unpublished documents (by default). See the "seeThruUnpub" parameter.
 * Minor changes of code and comments (see the code).
 # 1.0.9 (2010-06-09) by ncrossland
 - update metadata format for use in ModX 1.0.x installer
@@ -152,7 +152,7 @@ switch ($format){
 		// TODO: Make a nested ul-li based on the levels in the document tree.
 		foreach ($docs as $doc){
 			$s  = "  <li class=\"sitemap\">";
-			$s .= "<a href=\"".($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]'."\" class=\"sitemap\">" . $doc['pagetitle'] . "</a>";
+			$s .= "<a href=\"".(($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]')."\" class=\"sitemap\">" . $doc['pagetitle'] . "</a>";
 			$s .= "</li>\n";
 			$output .= $s;
 		}
@@ -172,7 +172,7 @@ switch ($format){
 
 	case 'ror': // TODO
 	default: // Sitemap Protocol
-		$output = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+		$output = '<?xml version="1.0" encoding="'.$modx->config["modx_charset"].'"?>'."\n";
 		if ($xsl != ''){
 			$output .='<?xml-stylesheet type="text/xsl" href="'.$xsl.'"?>'."\n";
 		}
@@ -183,8 +183,8 @@ switch ($format){
 			$url = ($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]';
 			$date = $doc['editedon'];
 			$date = date("Y-m-d", $date);
-			$docPriority = ($doc[$priority]) ? $doc[$priority] : 0; // false if TV doesn't exist
-			$docChangefreq = ($doc[$changefreq]) ? $doc[$changefreq] : 0; // false if TV doesn't exist
+			$docPriority = ($doc[$priority]) ? $doc[$priority] : '0.5'; // false if TV doesn't exist
+			$docChangefreq = ($doc[$changefreq]) ? $doc[$changefreq] : 'weekly'; // false if TV doesn't exist
 	
 			$output .= "\t".'<url>'."\n";
 			$output .= "\t\t".'<loc>'.$url.'</loc>'."\n";
