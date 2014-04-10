@@ -183,8 +183,8 @@ switch ($format){
 			$url = ($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]';
 			$date = $doc['editedon'];
 			$date = date("Y-m-d", $date);
-			$docPriority = ($doc[$priority]) ? $doc[$priority] : 0; // false if TV doesn't exist
-			$docChangefreq = ($doc[$changefreq]) ? $doc[$changefreq] : 0; // false if TV doesn't exist
+			$docPriority = ($doc[$priority]) ? $doc[$priority] : '0.5'; // false if TV doesn't exist
+			$docChangefreq = ($doc[$changefreq]) ? $doc[$changefreq] : 'weekly'; // false if TV doesn't exist
 	
 			$output .= "\t".'<url>'."\n";
 			$output .= "\t\t".'<loc>'.$url.'</loc>'."\n";
