@@ -1,5 +1,7 @@
 <?php
 if(!defined('MODX_BASE_PATH')){die('What are you doing? Get out of here!');}
+ini_set('max_execution_time', 0);
+ini_set('memory_limit', '-1');
 /**
  * Sitemap
  * 
@@ -152,7 +154,7 @@ switch ($format){
 		// TODO: Make a nested ul-li based on the levels in the document tree.
 		foreach ($docs as $doc){
 			$s  = "  <li class=\"sitemap\">";
-			$s .= "<a href=\"".(($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]')."\" class=\"sitemap\">" . $doc['pagetitle'] . "</a>";
+			$s .= "<a href=\"".(($doc['id'] != $modx->config['site_start']) ? $modx->config['site_url'].$modx->makeUrl($doc['id']) :  $modx->config['site_url'])."\" class=\"sitemap\">" . $doc['pagetitle'] . "</a>";
 			$s .= "</li>\n";
 			$output .= $s;
 		}
@@ -163,8 +165,7 @@ switch ($format){
 	case 'txt': // plain text list of URLs
 
 		foreach ($docs as $doc){
-			$url = ($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]';
-
+			$url = ($doc['id'] != $modx->config['site_start']) ? $modx->config['site_url'].$modx->makeUrl($doc['id']) :  $modx->config['site_url'];
 			$output .= $url."\n";
 		}
 		
@@ -177,10 +178,10 @@ switch ($format){
 			$output .='<?xml-stylesheet type="text/xsl" href="'.$xsl.'"?>'."\n";
 		}
 		$output .='<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
-		
-		
+
 		foreach ($docs as $doc)	{
-			$url = ($doc['id'] != $modx->config['site_start']) ? '[(site_url)][~'.$doc['id'].'~]' : '[(site_url)]';
+			$url = ($doc['id'] != $modx->config['site_start']) ? $modx->config['site_url'].$modx->makeUrl($doc['id']) :  $modx->config['site_url'];
+			$url = htmlentities($url, ENT_XML1); //format all special chars to html entities
 			$date = $doc['editedon'];
 			$date = date("Y-m-d", $date);
 			$docPriority = ($doc[$priority]) ? $doc[$priority] : '0.5'; // false if TV doesn't exist
@@ -254,3 +255,4 @@ function getDocs($modx, $startid, $priority, $changefreq, $excludeTV, $seeThruUn
 	}
 	return $docs;
 }
+?>
