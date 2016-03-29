@@ -181,7 +181,7 @@ switch ($format){
 
 		foreach ($docs as $doc)	{
 			$url = ($doc['id'] != $modx->config['site_start']) ? $modx->makeUrl($doc['id'], '', '', 'full') :  $modx->config['site_url'];
-			$url = htmlentities($url, ENT_XML1); //format all special chars to html entities
+			$url = htmlentities($url); //format all special chars to html entities
 			$date = $doc['editedon'];
 			$date = date("Y-m-d", $date);
 			$docPriority = ($doc[$priority]) ? $doc[$priority] : '0.5'; // false if TV doesn't exist
