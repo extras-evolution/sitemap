@@ -34,53 +34,6 @@ Supports the following formats:
 - URL list in text format
   (e.g. Yahoo! submission)
 
-
-Changelog:
-# 1.0.11 (2012-10-01) by DivanDesign (http://www.DivanDesign.biz)
-+ Document will be excluded from sitemap when changefreq parameter equals 'exclude'.
-* [(site_url)] (without alias) is using now for the start page ($modx->config['start_page']) document url.
-# 1.0.10 (2012-02-08) by DivanDesign (http://www.DivanDesign.biz)
-+ Snippet can see through unpublished documents (by default). See the "seeThruUnpub" parameter.
-* Minor changes of code and comments (see the code).
-# 1.0.9 (2010-06-09) by ncrossland
-- update metadata format for use in ModX 1.0.x installer
-# 1.0.8 (2008-08-21)
-- excludeTemplates can now also be specified as a template ID instead of template name. 
-  Useful if you change the names of your templates frequently. (ncrossland)
-  e.g. &excludeTemplates=`myTemplateName,3,4`
-# 1.0.7 (2008-07-30)
-- Unpublished and deleted documents were showing up in the sitemap. Even though they could not be viewed, 
-  they were showing up as broken links to search engines. (ncrossland)
-# 1.0.6 (2008-02-28)
-- Add optional parameter (excludeWeblinks) to exclude weblinks from the sitemap, since they often point to external
-  sites (which don't belong on your sitemap), or redirecting to other internal pages (which are already
-  in the sitemap). Google Webmaster Tools generates warnings for excessive redirects.    
-  Default is false - e.g. default behaviour remains unchanged. (ncrossland)
-# 1.0.5 (2008-02-24)
-- Modification about non searchable documents, as suggested by forum user JayBee
-  (http://modxcms.com/forums/index.php/topic,5754.msg99895.html#msg99895)
-# 1.0.4 (2008-02-06) by Bert Catsburg, bert@catsburg.com
-- Added display option 'ulli'. 
-  An <ul><li> list of all published documents.
-# 1.0.3 (2007-05-16)
-- Added ability to specify the XSL URL - you don't always need one and it 
-  seems to create a lot of support confusion!
-  It is now a parameter (&xsl=``) which can take either an alias or a doc ID (ncrossland)
-- Modifications suggested by forum users Grad and Picachu incorporated
-  (http://modxcms.com/forums/index.php/topic,5754.60.html)
-# 1.0.2 (2006-07-12)
-- Reworked fetching of template variable value to
-  get INHERITED value.
-# 1.0.1
-- Reworked fetching of template variable value,
-  now it gets computed value instead of nominal;
-  however, still not the inherited value.
-# 1.0
-- First public release.
-
-TODO:
-- provide output for ROR
---------------------------------------------------
 */
 
 /* Parameters */
@@ -133,6 +86,9 @@ if (!empty ($excludeTemplates)){
 $_ = array();
 // filter out documents which shouldn't be included
 foreach ($docs as $doc){
+    
+    $docid = $doc['id'];
+    
     //by template, excludeTV, published, searchable
     if(!isset($remainingTemplates[$doc['template']])) continue;
     if($doc[$excludeTV])                              continue;
@@ -141,12 +97,17 @@ foreach ($docs as $doc){
     if(!$doc['template'])                             continue;
     if(!$doc['searchable'])                           continue;
     if($excludeWeblinks && $doc['type']=='reference') continue;
-    if($doc['id']==$modx->documentIdentifier)         continue;
+    if($docid==$modx->documentIdentifier)             continue;
     
-    $_[] = $doc;
+    $_[$docid] = $doc;
 }
 $docs = $_;
 unset ($_, $allTemplates, $excludeTemplates);
+
+$site_editedon = get_site_editedon();
+if($site_editedon) {
+    $docs[$modx->config['site_start']]['editedon'] = $site_editedon;
+}
 
 // build sitemap in specified format
 // ---------------------------------------------
@@ -199,10 +160,10 @@ switch ($format){
 
 return join("\n",$output);
 
-# functions
-# ---------------------------------------------
+// functions
+// ---------------------------------------------
 
-# gets (inherited) value of templat e variable
+// gets (inherited) value of templat e variable
 //TODO: wtf? In MODx 0.9.2.1 O_o Is this actually?
 function getTV($modx, $docid, $doctv){
     while ($pid = $modx->getDocument($docid, 'parent')){
@@ -221,13 +182,13 @@ function getTV($modx, $docid, $doctv){
     return $output;
 }
 
-# gets list of published documents with properties
-function getDocs($modx, $startid, $priority, $changefreq, $excludeTV, $seeThruUnpub){
+// gets list of published documents with properties
+function getDocs($modx, $startid=0, $priority, $changefreq, $excludeTV, $seeThruUnpub){
     $fields = "id,editedon,template,published,searchable,pagetitle,type,isfolder,parent,publishedon,content LIKE '%<img%' as hasImage";
     //If need to see through unpublished
-    if ($seeThruUnpub) $docs = $modx->getAllChildren($startid, 'menuindex', 'asc', $fields);
-    else               $docs = $modx->getActiveChildren($startid, 'menuindex', 'asc', $fields);
-
+    if ($seeThruUnpub) $docs = getAllChildren($startid, $fields);
+    else               $docs = getActiveChildren($startid, $fields);
+    
     $rs = $modx->db->select('name','[+prefix+]site_tmplvars',sprintf("name='%s'",$modx->db->escape($priority)));
     $priority_exists = $modx->db->getRecordCount($rs) ? 1 : 0;
     $rs = $modx->db->select('name','[+prefix+]site_tmplvars',sprintf("name='%s'",$modx->db->escape($changefreq)));
@@ -271,9 +232,51 @@ function getDocs($modx, $startid, $priority, $changefreq, $excludeTV, $seeThruUn
         
         //TODO: $modx->getAllChildren & $modx->getActiveChildren always return the array
 //         if ($modx->getAllChildren($id)){
-            $docs = array_merge($docs, getDocs($modx, $id, $priority, $changefreq, $excludeTV, $seeThruUnpub));
+            $children = getDocs($modx, $id, $priority, $changefreq, $excludeTV, $seeThruUnpub);
+            if($children) {
+                $_ = array();
+                foreach($children as $child) {
+                    $_[] = $child['editedon'];
+                }
+                $docs[$i]['editedon'] = max($_);
+            }
+            $docs = array_merge($docs, $children);
 //         }
 
+    }
+    return $docs;
+}
+
+function get_site_editedon() {
+    global $modx;
+    
+    $where = 'privateweb=0 AND published=1 AND deleted=0';
+    $rs = $modx->db->select('editedon','[+prefix+]site_content', $where, 'editedon DESC', 1);
+    return $modx->db->getValue($rs);
+}
+
+function getAllChildren($id= 0, $fields= 'id, pagetitle, description, parent, alias, menutitle') {
+    global $modx;
+    
+    $where = "parent='{$id}' AND deleted=0 AND privateweb=0";
+    $rs= $modx->db->select($fields,'[+prefix+]site_content', $where, 'menuindex ASC');
+    $docs= array ();
+    while ($row = $modx->db->getRow($rs))
+    {
+        $docs[] = $row;
+    }
+    return $docs;
+}
+
+function getActiveChildren($id= 0, $fields= 'id, pagetitle, description, parent, alias, menutitle') {
+    global $modx;
+    
+    $where = "parent='{$id}' AND published=1 AND deleted=0 AND privateweb=0";
+    $rs= $modx->db->select($fields,'[+prefix+]site_content', $where, 'menuindex ASC');
+    $docs= array ();
+    while ($row = $modx->db->getRow($rs))
+    {
+        $docs[] = $row;
     }
     return $docs;
 }
