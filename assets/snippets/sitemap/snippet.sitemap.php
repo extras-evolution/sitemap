@@ -51,12 +51,12 @@ if (is_numeric($xsl)) $xsl = $modx->makeUrl($xsl);
 
 /* End parameters */
 
-# get list of documents
+// get list of documents
 $docs = getDocs($modx, $startid, $priority, $changefreq, $excludeTV, $seeThruUnpub);
 
 
-# filter out documents by template or TV
-# ---------------------------------------------
+// filter out documents by template or TV
+// ---------------------------------------------
 // get all templates
 $select = $modx->db->select('id, templatename', '[+prefix+]site_templates');
 while ($query = $modx->db->getRow($select)){
