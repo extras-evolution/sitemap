@@ -166,6 +166,7 @@ return join("\n",$output);
 // gets (inherited) value of templat e variable
 //TODO: wtf? In MODx 0.9.2.1 O_o Is this actually?
 function getTV($modx, $docid, $doctv){
+    $output = '';
     while ($pid = $modx->getDocument($docid, 'parent')){
         $tv = $modx->getTemplateVar($doctv,'*',$docid);
         if (($tv['value'] && substr($tv['value'],0,8) != '@INHERIT') || !$tv['value']){ // tv default value is overriden (including empty)
