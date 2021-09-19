@@ -46,7 +46,7 @@ if(!isset($xsl))              $xsl = '';
 if(!isset($excludeWeblinks))  $excludeWeblinks = 1;
 
 $seeThruUnpub = (isset($seeThruUnpub) && $seeThruUnpub == '0') ? false : true;
-$format       = (isset($format) && ($format != 'ror')) ? $format : 'sp';
+$format       = (isset($format) && ($format !== 'ror')) ? $format : 'sp';
 if (is_numeric($xsl)) $xsl = $modx->makeUrl($xsl);
 
 /* End parameters */
@@ -90,14 +90,14 @@ foreach ($docs as $doc){
     $docid = $doc['id'];
     
     //by template, excludeTV, published, searchable
-    if(!isset($remainingTemplates[$doc['template']])) continue;
-    if($doc[$excludeTV])                              continue;
-    if($doc[$changefreq]=='exclude')                  continue;
-    if(!$doc['published'])                            continue;
-    if(!$doc['template'])                             continue;
-    if(!$doc['searchable'])                           continue;
-    if($excludeWeblinks && $doc['type']=='reference') continue;
-    if($docid==$modx->documentIdentifier)             continue;
+    if(!isset($remainingTemplates[$doc['template']]))    continue;
+    if($doc[$excludeTV])                                 continue;
+    if($doc[$changefreq] === 'exclude')                  continue;
+    if(!$doc['published'])                               continue;
+    if(!$doc['template'])                                continue;
+    if(!$doc['searchable'])                              continue;
+    if($excludeWeblinks && $doc['type'] === 'reference') continue;
+    if($docid==$modx->documentIdentifier)                continue;
     
     $_[$docid] = $doc;
 }
@@ -158,7 +158,7 @@ switch ($format){
 
 }
 
-return join("\n",$output);
+return implode("\n",$output);
 
 // functions
 // ---------------------------------------------
@@ -169,13 +169,14 @@ function getTV($modx, $docid, $doctv){
     $output = '';
     while ($pid = $modx->getDocument($docid, 'parent')){
         $tv = $modx->getTemplateVar($doctv,'*',$docid);
-        if (($tv['value'] && substr($tv['value'],0,8) != '@INHERIT') || !$tv['value']){ // tv default value is overriden (including empty)
+        if (empty($tv['value']) || strpos($tv['value'], '@INHERIT') !== 0){
+            // tv default value is overriden (including empty)
             $output = $tv['value'];
             break;
-        }else{ // there is no parent with default value overriden 
-            $output = trim(substr($tv['value'],8));
         }
-        
+        // there is no parent with default value overriden
+        $output = trim(substr($tv['value'],8));
+
         // move up one document in document tree
         $docid = $pid['parent'];
     }
@@ -187,8 +188,7 @@ function getTV($modx, $docid, $doctv){
 function getDocs($modx, $startid=0, $priority, $changefreq, $excludeTV, $seeThruUnpub){
     $fields = "id,editedon,template,published,searchable,pagetitle,type,isfolder,parent,publishedon,content LIKE '%<img%' as hasImage";
     //If need to see through unpublished
-    if ($seeThruUnpub) $docs = getAllChildren($startid, $fields);
-    else               $docs = getActiveChildren($startid, $fields);
+    $docs = $seeThruUnpub ? getAllChildren($startid, $fields) : getActiveChildren($startid, $fields);
     
     $rs = $modx->db->select('name','[+prefix+]site_tmplvars',sprintf("name='%s'",$modx->db->escape($priority)));
     $priority_exists = $modx->db->getRecordCount($rs) ? 1 : 0;
@@ -200,9 +200,15 @@ function getDocs($modx, $startid=0, $priority, $changefreq, $excludeTV, $seeThru
     // add sub-children to the list
     foreach ($docs as $i => $doc){
         $id = $doc['id'];
-        if(!$doc['editedon']) $doc['editedon'] = $doc['publishedon'];
-        if($id==$modx->config['site_start']) $docs[$i]['url'] = $modx->config['site_url'];
-        else                                 $docs[$i]['url'] = trim($modx->makeUrl($id,'','','full'));
+        if(!$doc['editedon']) {
+            $doc['editedon'] = $doc['publishedon'];
+        }
+
+        if($id == $modx->config['site_start']) {
+            $docs[$i]['url'] = $modx->config['site_url'];
+        } else {
+            $docs[$i]['url'] = trim($modx->makeUrl($id, '', '', 'full'));
+        }
         
         $date_diff = round(($_SERVER['REQUEST_TIME']-(int)$doc['editedon'])/86400);
         
@@ -228,21 +234,21 @@ function getDocs($modx, $startid=0, $priority, $changefreq, $excludeTV, $seeThru
         elseif($date_diff)                       $docs[$i][$changefreq] = 'daily';
         else                                     $docs[$i][$changefreq] = 'never';
         
-        if($excludeTV_exists) $docs[$i][$excludeTV] = getTV($modx, $id, $excludeTV); // add excludeTV property
-        else                  $docs[$i][$excludeTV] = false;
+        if($excludeTV_exists) {
+            $docs[$i][$excludeTV] = getTV($modx, $id, $excludeTV);
+        } else {
+            $docs[$i][$excludeTV] = false;
+        }
         
-        //TODO: $modx->getAllChildren & $modx->getActiveChildren always return the array
-//         if ($modx->getAllChildren($id)){
-            $children = getDocs($modx, $id, $priority, $changefreq, $excludeTV, $seeThruUnpub);
-            if($children) {
-                $_ = array();
-                foreach($children as $child) {
-                    $_[] = $child['editedon'];
-                }
-                $docs[$i]['editedon'] = max($_);
+        $children = getDocs($modx, $id, $priority, $changefreq, $excludeTV, $seeThruUnpub);
+        if($children) {
+            $_ = array();
+            foreach($children as $child) {
+                $_[] = $child['editedon'];
             }
-            $docs = array_merge($docs, $children);
-//         }
+            $docs[$i]['editedon'] = max($_);
+        }
+        $docs = array_merge($docs, $children);
 
     }
     return $docs;
