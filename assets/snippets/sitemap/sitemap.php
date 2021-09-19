@@ -38,34 +38,21 @@ if (is_numeric($xsl)) {
 
 /* End parameters */
 
-// get list of documents
 $docs = getDocs($startid, $priority, $changefreq, $excludeTV, $seeThruUnpub);
 
-
-// filter out documents by template or TV
-// ---------------------------------------------
-// get all templates
-$select = db()->select('id, templatename', '[+prefix+]site_templates');
-while ($query = db()->getRow($select)){
-    $allTemplates[$query['id']] = $query['templatename'];
+$rs = db()->select('id, templatename', '[+prefix+]site_templates');
+while ($row = db()->getRow($rs)){
+    $allTemplates[$row['id']] = $row['templatename'];
 }
 
-$remainingTemplates = $allTemplates;
-
-// get templates to exclude, and remove them from the all templates list
 if (!empty ($excludeTemplates)){
-
     $excludeTemplates = explode(',', $excludeTemplates);
-
-    // Loop through each template we want to exclude
     foreach ($excludeTemplates as $template){
         $template = trim($template);
-
-        // If it's numeric, assume it's an ID, and remove directly from the $allTemplates array
-        if (is_numeric($template) && isset($remainingTemplates[$template])){
-            unset($remainingTemplates[$template]);
-        }elseif (trim($template) && in_array($template, $remainingTemplates)){ // If it's text, and not empty, assume it's a template name
-            unset($remainingTemplates[array_search($template, $remainingTemplates)]);
+        if (is_numeric($template) && isset($allTemplates[$template])){
+            unset($allTemplates[$template]);
+        }elseif (trim($template) && in_array($template, $allTemplates)){
+            unset($allTemplates[array_search($template, $allTemplates)]);
         }
     }
 }
@@ -73,23 +60,17 @@ if (!empty ($excludeTemplates)){
 $_ = array();
 // filter out documents which shouldn't be included
 foreach ($docs as $doc){
-
-    $docid = $doc['id'];
-
-    //by template, excludeTV, published, searchable
-    if(!isset($remainingTemplates[$doc['template']]))    continue;
+    if(!isset($allTemplates[$doc['template']]))          continue;
     if($doc[$excludeTV])                                 continue;
-    if($doc[$changefreq] === 'exclude')                  continue;
+    if($doc['changefreq'] === 'exclude')                 continue;
     if(!$doc['published'])                               continue;
-    if(!$doc['template'])                                continue;
     if(!$doc['searchable'])                              continue;
     if($excludeWeblinks && $doc['type'] === 'reference') continue;
-    if($docid == evo()->documentIdentifier)                continue;
-
-    $_[$docid] = $doc;
+    if($doc['id'] == evo()->documentIdentifier)          continue;
+    $_[$doc['id']] = $doc;
 }
 $docs = $_;
-unset ($_, $allTemplates, $excludeTemplates);
+unset ($_, $excludeTemplates);
 
 $site_editedon = get_site_editedon();
 if($site_editedon) {
@@ -136,8 +117,8 @@ switch ($format){
             $output[] = '        <loc>'.htmlentities($doc['url']).'</loc>';
             if($doc['editedon'])
                 $output[] = '        <lastmod>'.date('Y-m-d', $doc['editedon']).'</lastmod>';
-            $output[] = '        <priority>'.$doc[$priority].'</priority>';
-            $output[] = '        <changefreq>'.$doc[$changefreq].'</changefreq>';
+            $output[] = '        <priority>'.$doc['priority'].'</priority>';
+            $output[] = '        <changefreq>'.$doc['changefreq'].'</changefreq>';
             $output[] = '    </url>';
         }
 

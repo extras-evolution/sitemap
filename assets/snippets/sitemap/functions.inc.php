@@ -5,14 +5,10 @@ function getTV($docid, $doctv){
     while ($pid = evo()->getDocument($docid, 'parent')){
         $tv = evo()->getTemplateVar($doctv,'*',$docid);
         if (empty($tv['value']) || strpos($tv['value'], '@INHERIT') !== 0){
-            // tv default value is overriden (including empty)
             $output = $tv['value'];
             break;
         }
-        // there is no parent with default value overriden
         $output = trim(substr($tv['value'],8));
-
-        // move up one document in document tree
         $docid = $pid['parent'];
     }
 
@@ -21,12 +17,7 @@ function getTV($docid, $doctv){
 
 // gets list of published documents with properties
 function getDocs($startid=0, $priority, $changefreq, $excludeTV, $seeThruUnpub){
-    $fields = "id,editedon,template,published,searchable,pagetitle,type,isfolder,parent,publishedon";
-    $docs = $seeThruUnpub
-        ? getAllChildren($startid, $fields)
-        : getActiveChildren($startid, $fields);
-
-    // add sub-children to the list
+    $docs = $seeThruUnpub ? getChildren($startid) : getChildren($startid, false);
     foreach ($docs as $i => $doc){
         $id = $doc['id'];
         if(!$doc['editedon']) {
@@ -51,21 +42,21 @@ function getDocs($startid=0, $priority, $changefreq, $excludeTV, $seeThruUnpub){
 
         $date_diff = round(($_SERVER['REQUEST_TIME']-(int)$doc['editedon'])/86400);
 
-        if(priority_exists($priority))           $docs[$i][$priority] = getTV($id, $priority);
-        elseif($id==evo()->config['site_start']) $docs[$i][$priority] = '1.0';
-        elseif($date_diff<7)                     $docs[$i][$priority] = $doc['isfolder'] ? '0.7' : '0.9';
-        elseif($date_diff<14)                    $docs[$i][$priority] = $doc['isfolder'] ? '0.6' : '0.8';
-        elseif($date_diff<30)                    $docs[$i][$priority] = '0.5';
-        elseif($date_diff<60)                    $docs[$i][$priority] = '0.4';
-        else                                     $docs[$i][$priority] = '0.3';
+        if(priority_exists($priority))           $docs[$i]['priority'] = getTV($id, $priority);
+        elseif($id==evo()->config['site_start']) $docs[$i]['priority'] = '1.0';
+        elseif($date_diff<7)                     $docs[$i]['priority'] = $doc['isfolder'] ? '0.7' : '0.9';
+        elseif($date_diff<14)                    $docs[$i]['priority'] = $doc['isfolder'] ? '0.6' : '0.8';
+        elseif($date_diff<30)                    $docs[$i]['priority'] = '0.5';
+        elseif($date_diff<60)                    $docs[$i]['priority'] = '0.4';
+        else                                     $docs[$i]['priority'] = '0.3';
 
-        if(changefreq_exists($changefreq))       $docs[$i][$changefreq] = getTV($id, $changefreq);
-        elseif($id==evo()->config['site_start']) $docs[$i][$changefreq] = 'always';
-        elseif($date_diff<7)                     $docs[$i][$changefreq] = 'daily';
-        elseif($date_diff<14)                    $docs[$i][$changefreq] = 'weekly';
-        elseif($date_diff<60)                    $docs[$i][$changefreq] = 'monthly';
-        elseif($date_diff<360)                   $docs[$i][$changefreq] = 'yearly';
-        else                                     $docs[$i][$changefreq] = 'never';
+        if(changefreq_exists($changefreq))       $docs[$i]['changefreq'] = getTV($id, $changefreq);
+        elseif($id==evo()->config['site_start']) $docs[$i]['changefreq'] = 'always';
+        elseif($date_diff<7)                     $docs[$i]['changefreq'] = 'daily';
+        elseif($date_diff<14)                    $docs[$i]['changefreq'] = 'weekly';
+        elseif($date_diff<60)                    $docs[$i]['changefreq'] = 'monthly';
+        elseif($date_diff<360)                   $docs[$i]['changefreq'] = 'yearly';
+        else                                     $docs[$i]['changefreq'] = 'never';
 
         if(excludeTV_exists($excludeTV)) {
             $docs[$i][$excludeTV] = getTV($id, $excludeTV);
@@ -132,23 +123,17 @@ function get_site_editedon() {
     return db()->getValue($rs);
 }
 
-function getAllChildren($id= 0, $fields= 'id, pagetitle, description, parent, alias, menutitle') {
-    $where = "parent='{$id}' AND deleted=0 AND privateweb=0";
-    $rs= db()->select($fields,'[+prefix+]site_content', $where, 'menuindex ASC');
+function getChildren($id=0, $all=true) {
+    $rs= db()->select(
+        'id,editedon,template,published,searchable,pagetitle,type,isfolder,parent,publishedon',
+        '[+prefix+]site_content',
+        $all
+            ? "parent='{$id}' AND deleted=0 AND privateweb=0"
+            : "parent='{$id}' AND published=1 AND deleted=0 AND privateweb=0",
+        'menuindex ASC'
+    );
     $docs= array ();
-    while ($row = db()->getRow($rs))
-    {
-        $docs[] = $row;
-    }
-    return $docs;
-}
-
-function getActiveChildren($id= 0, $fields= 'id, pagetitle, description, parent, alias, menutitle') {
-    $where = "parent='{$id}' AND published=1 AND deleted=0 AND privateweb=0";
-    $rs= db()->select($fields,'[+prefix+]site_content', $where, 'menuindex ASC');
-    $docs= array ();
-    while ($row = db()->getRow($rs))
-    {
+    while ($row = db()->getRow($rs)) {
         $docs[] = $row;
     }
     return $docs;
