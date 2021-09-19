@@ -5,4 +5,4 @@ ini_set('max_execution_time', 0);
 ini_set('memory_limit', '-1');
 
 include_once __DIR__ . '/functions.inc.php';
-return include __DIR__ . 'sitemap.php';
+return include __DIR__ . '/sitemap.php';
